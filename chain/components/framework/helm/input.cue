@@ -3,12 +3,15 @@ package helm
 import (
 	"universe.dagger.io/docker"
 	"github.com/h8r-dev/stacks/chain/factory/basefactory"
+	"github.com/h8r-dev/stacks/chain/internal/utils/base"
 )
 
 #Input: {
+	_baseImage: base.#Image & {}
+	image:      _baseImage.output
+
 	name:      string
 	chartName: string
-	image:     docker.#Image
 	// Helm values set
 	// Format: '.image.repository = "rep" | .image.tag = "tag"'
 	set?: string | *""

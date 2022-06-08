@@ -56,6 +56,8 @@ dagger.#Plan & {
 	}
 
 	actions: {
+		app_name: client.env.APP_NAME
+
 		setup: #Setup & {
 			app_domain: client.env.APP_DOMAIN
 			kubeconfig: client.commands.kubeconfig.stdout
@@ -73,23 +75,32 @@ dagger.#Plan & {
 		sourceCode: {
 			backend: gin.#Instance & {// Store it's state in a configmap
 					input: gin.#Input & {
-					name:       client.env.APP_NAME + "backend"
+					name:       app_name + "-backend"
 					kubeconfig: setup.output.kubeconfig.output.kubeconfig
 				}
 			}
 			frontend: next.#Instance & {// Store it's state into a configmap
 					input: next.#Input & {
-					name: client.env.APP_NAME + "frontend"
+					name: app_name + "-frontend"
 				}
 			}
-			deploy: helm
+			deploy: helm.#Instance & {
+				input: helm.#Input & {
+					name:       app_name + "-deploy"
+					kubeconfig: setup.output.kubeconfig.output.kubeconfig
+					chart:      "./helm/app"
+					values:     "./helm/app/values.yaml"
+					starter:    "helm-starter/nodejs/node"
+				}
+			}
 		}
 
 		ci: {
 
 		}
 
-		scm: {// Git repo provider
+		// Git repo provider
+		scm: {
 
 		}
 
@@ -105,7 +116,7 @@ dagger.#Plan & {
 
 		}
 
-		log: {
+		logging: {
 
 		}
 
