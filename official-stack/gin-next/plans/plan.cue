@@ -9,9 +9,12 @@ import (
 	"github.com/h8r-dev/stacks/chain/components/utils/kubeconfig"
 	"github.com/h8r-dev/stacks/chain/factory/basefactory"
 	"github.com/h8r-dev/stacks/chain/components/dev/nocalhost"
+
 	"github.com/h8r-dev/stacks/chain/components/framework/gin"
 	"github.com/h8r-dev/stacks/chain/components/framework/next"
 	"github.com/h8r-dev/stacks/chain/components/framework/helm"
+	githubCI "github.com/h8r-dev/stacks/chain/components/ci/github"
+
 )
 
 #Setup: {
@@ -56,7 +59,10 @@ dagger.#Plan & {
 	}
 
 	actions: {
-		app_name: client.env.APP_NAME
+		app_name:          client.env.APP_NAME
+		frontend_app_name: app_name + "-frontend"
+		backend_app_name:  app_name + "-backend"
+		deploy_app_name:   app_name + "-deploy"
 
 		setup: #Setup & {
 			app_domain: client.env.APP_DOMAIN
@@ -75,18 +81,18 @@ dagger.#Plan & {
 		sourceCode: {
 			backend: gin.#Instance & {// Store it's state in a configmap
 					input: gin.#Input & {
-					name:       app_name + "-backend"
+					name:       backend_app_name
 					kubeconfig: setup.output.kubeconfig.output.kubeconfig
 				}
 			}
 			frontend: next.#Instance & {// Store it's state into a configmap
 					input: next.#Input & {
-					name: app_name + "-frontend"
+					name: frontend_app_name
 				}
 			}
 			deploy: helm.#Instance & {
 				input: helm.#Input & {
-					name:       app_name + "-deploy"
+					name:       deploy_app_name
 					kubeconfig: setup.output.kubeconfig.output.kubeconfig
 					chart:      "./helm/app"
 					values:     "./helm/app/values.yaml"
@@ -96,7 +102,20 @@ dagger.#Plan & {
 		}
 
 		ci: {
-
+			frontend: githubCI.#Instance & {
+				input: githubCI.#Input & {
+					name:   frontend_app_name
+					branch: "master"
+					path:   "./frontend"
+				}
+			}
+			backend: githubCI.#Instance & {
+				input: githubCI.#Input & {
+					name:   backend_app_name
+					branch: "master"
+					path:   "./backend"
+				}
+			}
 		}
 
 		// Git repo provider
