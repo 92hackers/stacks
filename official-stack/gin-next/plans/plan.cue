@@ -9,8 +9,33 @@ import (
 	"github.com/h8r-dev/stacks/chain/components/utils/kubeconfig"
 	"github.com/h8r-dev/stacks/chain/factory/basefactory"
 	"github.com/h8r-dev/stacks/chain/components/dev/nocalhost"
+	"github.com/h8r-dev/stacks/chain/components/framework/gin"
+	"github.com/h8r-dev/stacks/chain/components/framework/next"
+	"github.com/h8r-dev/stacks/chain/components/framework/helm"
 )
 
+#Setup: {
+	app_domain: string
+	kubeconfig: dagger.#Secret
+
+	_domain: basefactory.#DefaultDomain & {
+		application: domain: app_domain
+		infra: domain:       app_domain
+	}
+
+	_kubeconfig: kubeconfig.#TransformToInternal & {
+		input: kubeconfig.#Input & {
+			"kubeconfig": kubeconfig
+		}
+	}
+
+	output: {
+		domain:     _domain
+		kubeconfig: _kubeconfig
+	}
+}
+
+// Stack Plan
 dagger.#Plan & {
 	client: {
 		commands: kubeconfig: {
@@ -29,16 +54,59 @@ dagger.#Plan & {
 		}
 		filesystem: "output.yaml": write: contents: actions.up._output.contents
 	}
+
 	actions: {
-		_domain: basefactory.#DefaultDomain & {
-			application: domain: client.env.APP_DOMAIN
-			infra: domain:       client.env.APP_DOMAIN
+		setup: #Setup & {
+			app_domain: client.env.APP_DOMAIN
+			kubeconfig: client.commands.kubeconfig.stdout
 		}
 
-		_kubeconfig: kubeconfig.#TransformToInternal & {
-			input: kubeconfig.#Input & {
-				kubeconfig: client.commands.kubeconfig.stdout
+		// Store infra components data in a configmap
+		up_infra: {
+
+		}
+
+		up_app: {
+
+		}
+
+		sourceCode: {
+			backend: gin.#Instance & {// Store it's state in a configmap
+					input: gin.#Input & {
+					name:       client.env.APP_NAME + "backend"
+					kubeconfig: setup.output.kubeconfig.output.kubeconfig
+				}
 			}
+			frontend: next.#Instance & {// Store it's state into a configmap
+					input: next.#Input & {
+					name: client.env.APP_NAME + "frontend"
+				}
+			}
+			deploy: helm
+		}
+
+		ci: {
+
+		}
+
+		scm: {// Git repo provider
+
+		}
+
+		cd: {
+
+		}
+
+		monitor: {
+
+		}
+
+		imageRegistry: {
+
+		}
+
+		log: {
+
 		}
 
 		_repoVisibility: client.env.REPO_VISIBILITY
@@ -47,10 +115,10 @@ dagger.#Plan & {
 			input: scaffoldfactory.#Input & {
 				networkType:         client.env.NETWORK_TYPE
 				appName:             client.env.APP_NAME
-				domain:              _domain
+				domain:              setup.output.app_domain
 				organization:        client.env.ORGANIZATION
 				personalAccessToken: client.env.GITHUB_TOKEN
-				kubeconfig:          _kubeconfig.output.kubeconfig
+				kubeconfig:          setup.output.kubeconfig.output.kubeconfig
 				repository: [
 					{
 						name:      client.env.APP_NAME + "-frontend"
@@ -98,7 +166,7 @@ dagger.#Plan & {
 				organization:        client.env.ORGANIZATION
 				repositorys:         _scaffold.output.image
 				visibility:          _repoVisibility
-				kubeconfig:          _kubeconfig.output.kubeconfig
+				kubeconfig:          setup.output.kubeconfig.output.kubeconfig
 			}
 		}
 
@@ -107,8 +175,8 @@ dagger.#Plan & {
 				input: cdfactory.#Input & {
 					provider:    "argocd"
 					repositorys: _git.output.image
-					kubeconfig:  _kubeconfig.output.kubeconfig
-					domain:      _domain
+					kubeconfig:  setup.output.kubeconfig.output.kubeconfig
+					domain:      setup.output.app_domain
 				}
 			}
 			_initNocalhost: nocalhost.#Instance & {
@@ -116,9 +184,9 @@ dagger.#Plan & {
 					image:              _cd.output.image
 					githubAccessToken:  client.env.GITHUB_TOKEN
 					githubOrganization: client.env.ORGANIZATION
-					kubeconfig:         _kubeconfig.output.kubeconfig
+					kubeconfig:         setup.output.kubeconfig.output.kubeconfig
 					appName:            client.env.APP_NAME
-					apiServer:          _kubeconfig.output.apiServer
+					apiServer:          setup.output.kubeconfig.output.apiServer
 				}
 			}
 			_output: statewriter.#Output & {
