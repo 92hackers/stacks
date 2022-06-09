@@ -1,22 +1,23 @@
-package plan
+package stack
 
 import (
 	// Stack engine
 	"github.com/h8r-dev/stacks/chain/components/engine/baseEngine"
 
 	// Infra
-	"github.com/h8r-dev/stacks/chain/components/dev/nocalhost"
-	"github.com/h8r-dev/stacks/chain/components/cd/argocd" // Argocd relys on CI
-	githubCI "github.com/h8r-dev/stacks/chain/components/ci/github"
-	"github.com/h8r-dev/stacks/chain/components/addons/prometheus"
-	"github.com/h8r-dev/stacks/chain/components/addons/loki"
-	"github.com/h8r-dev/stacks/chain/components/addons/sealedSecrets"
-	githubSCM "github.com/h8r-dev/stacks/chain/components/scm/github"
+	// "github.com/h8r-dev/stacks/chain/components/dev/nocalhost"
+	// "github.com/h8r-dev/stacks/chain/components/cd/argocd" // Argocd relys on CI
+	// githubCI "github.com/h8r-dev/stacks/chain/components/ci/github"
+	// "github.com/h8r-dev/stacks/chain/components/addons/prometheus"
+	// "github.com/h8r-dev/stacks/chain/components/addons/loki"
+	// "github.com/h8r-dev/stacks/chain/components/addons/sealedSecrets"
+	// githubSCM "github.com/h8r-dev/stacks/chain/components/scm/github"
+	// githubPackage "github.com/h8r-dev/stacks/chain/components/registry/github"
 
 	// Third-party infra component
-	"github.com/92hackers/certManager"
+	// "github.com/92hackers/certManager"
 
-	// Application
+	// Official Application
 	"github.com/h8r-dev/stacks/chain/components/framework/gin"
 	"github.com/h8r-dev/stacks/chain/components/framework/next"
 	"github.com/h8r-dev/stacks/chain/components/framework/helm"
@@ -25,35 +26,52 @@ import (
 	"github.com/92hackers/koa"
 )
 
-#Plan: {
-	app_name:        string
-	app_domain:      string
+#Stack: {
 	kubeconfig_path: string
 
-	sourceCode: {
-		// Store it's state in a configmap
-		backend: gin.#Instance & {}
+	apps: [
+		{
+			name:   string
+			domain: string
+			framework: {
+				// Store it's state in a configmap
+				backend: gin.#Instance & {}
 
-		// Store it's state into a configmap
-		frontend: next.#Instance & {}
+				// Store it's state into a configmap
+				frontend: next.#Instance & {}
+			}
+		},
+		{
+			name:   string
+			domain: string
+			framework: {
+				// Store it's state in a configmap
+				backend: gin.#Instance & {}
 
-		deploy: helm.#Instance & {}
-	}
+				// Store it's state into a configmap
+				frontend: next.#Instance & {}
+			}
+		},
+	]
 
 	ci: component: githubCI.#Instance & {}
 
 	// Git repo provider
-	scm: {
+	gitRepo: {
 		component: githubSCM.#Instance & {}
 	}
 
-	cd: component: argocd.#Instance & {}
-
-	monitor: component: prometheus.#Instance & {}
-
-	imageRegistry: {
-
+	cd: {
+		component: argocd.#Instance & {}
+		deploy: {
+			method: 'helm' // helm or k8s manifest
+			repo:   helm.#Instance & {}
+		}
 	}
+
+	monitor: component: prometheus.#instance & {}
+
+	imageRegistry: component: githubPackage.#Instance & {}
 
 	logging: {
 
@@ -61,5 +79,5 @@ import (
 }
 
 baseEngine.#Engine & {
-	plan: #Plan
+	stack: #Stack
 }
