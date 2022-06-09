@@ -1,227 +1,65 @@
-package main
+package plan
 
 import (
-	"dagger.io/dagger"
-	"github.com/h8r-dev/stacks/chain/factory/scaffoldfactory"
-	"github.com/h8r-dev/stacks/chain/factory/scmfactory"
-	"github.com/h8r-dev/stacks/chain/factory/cdfactory"
-	"github.com/h8r-dev/stacks/chain/components/utils/statewriter"
-	"github.com/h8r-dev/stacks/chain/components/utils/kubeconfig"
-	"github.com/h8r-dev/stacks/chain/factory/basefactory"
-	"github.com/h8r-dev/stacks/chain/components/dev/nocalhost"
+	// Stack engine
+	"github.com/h8r-dev/stacks/chain/components/engine/baseEngine"
 
+	// Infra
+	"github.com/h8r-dev/stacks/chain/components/dev/nocalhost"
+	"github.com/h8r-dev/stacks/chain/components/cd/argocd" // Argocd relys on CI
+	githubCI "github.com/h8r-dev/stacks/chain/components/ci/github"
+	"github.com/h8r-dev/stacks/chain/components/addons/prometheus"
+	"github.com/h8r-dev/stacks/chain/components/addons/loki"
+	"github.com/h8r-dev/stacks/chain/components/addons/sealedSecrets"
+	githubSCM "github.com/h8r-dev/stacks/chain/components/scm/github"
+
+	// Third-party infra component
+	"github.com/92hackers/certManager"
+
+	// Application
 	"github.com/h8r-dev/stacks/chain/components/framework/gin"
 	"github.com/h8r-dev/stacks/chain/components/framework/next"
 	"github.com/h8r-dev/stacks/chain/components/framework/helm"
-	githubCI "github.com/h8r-dev/stacks/chain/components/ci/github"
 
+	// Third-party application component
+	"github.com/92hackers/koa"
 )
 
-#Setup: {
-	app_domain: string
-	kubeconfig: dagger.#Secret
+#Plan: {
+	app_name:        string
+	app_domain:      string
+	kubeconfig_path: string
 
-	_domain: basefactory.#DefaultDomain & {
-		application: domain: app_domain
-		infra: domain:       app_domain
+	sourceCode: {
+		// Store it's state in a configmap
+		backend: gin.#Instance & {}
+
+		// Store it's state into a configmap
+		frontend: next.#Instance & {}
+
+		deploy: helm.#Instance & {}
 	}
 
-	_kubeconfig: kubeconfig.#TransformToInternal & {
-		input: kubeconfig.#Input & {
-			"kubeconfig": kubeconfig
-		}
+	ci: component: githubCI.#Instance & {}
+
+	// Git repo provider
+	scm: {
+		component: githubSCM.#Instance & {}
 	}
 
-	output: {
-		domain:     _domain
-		kubeconfig: _kubeconfig
+	cd: component: argocd.#Instance & {}
+
+	monitor: component: prometheus.#Instance & {}
+
+	imageRegistry: {
+
+	}
+
+	logging: {
+
 	}
 }
 
-// Stack Plan
-dagger.#Plan & {
-	client: {
-		commands: kubeconfig: {
-			name: "cat"
-			args: ["\(env.KUBECONFIG)"]
-			stdout: dagger.#Secret
-		}
-		env: {
-			ORGANIZATION:    string
-			GITHUB_TOKEN:    dagger.#Secret
-			KUBECONFIG:      string
-			APP_NAME:        string
-			APP_DOMAIN:      string | *"h8r.site"
-			NETWORK_TYPE:    string | *"default"
-			REPO_VISIBILITY: string | *"private"
-		}
-		filesystem: "output.yaml": write: contents: actions.up._output.contents
-	}
-
-	actions: {
-		app_name:          client.env.APP_NAME
-		frontend_app_name: app_name + "-frontend"
-		backend_app_name:  app_name + "-backend"
-		deploy_app_name:   app_name + "-deploy"
-
-		setup: #Setup & {
-			app_domain: client.env.APP_DOMAIN
-			kubeconfig: client.commands.kubeconfig.stdout
-		}
-
-		// Store infra components data in a configmap
-		up_infra: {
-
-		}
-
-		up_app: {
-
-		}
-
-		sourceCode: {
-			backend: gin.#Instance & {// Store it's state in a configmap
-					input: gin.#Input & {
-					name:       backend_app_name
-					kubeconfig: setup.output.kubeconfig.output.kubeconfig
-				}
-			}
-			frontend: next.#Instance & {// Store it's state into a configmap
-					input: next.#Input & {
-					name: frontend_app_name
-				}
-			}
-			deploy: helm.#Instance & {
-				input: helm.#Input & {
-					name:       deploy_app_name
-					kubeconfig: setup.output.kubeconfig.output.kubeconfig
-					chart:      "./helm/app"
-					values:     "./helm/app/values.yaml"
-					starter:    "helm-starter/nodejs/node"
-				}
-			}
-		}
-
-		ci: {
-			frontend: githubCI.#Instance & {
-				input: githubCI.#Input & {
-					name:   frontend_app_name
-					branch: "master"
-					path:   "./frontend"
-				}
-			}
-			backend: githubCI.#Instance & {
-				input: githubCI.#Input & {
-					name:   backend_app_name
-					branch: "master"
-					path:   "./backend"
-				}
-			}
-		}
-
-		// Git repo provider
-		scm: {
-
-		}
-
-		cd: {
-
-		}
-
-		monitor: {
-
-		}
-
-		imageRegistry: {
-
-		}
-
-		logging: {
-
-		}
-
-		_repoVisibility: client.env.REPO_VISIBILITY
-
-		_scaffold: scaffoldfactory.#Instance & {
-			input: scaffoldfactory.#Input & {
-				networkType:         client.env.NETWORK_TYPE
-				appName:             client.env.APP_NAME
-				domain:              setup.output.app_domain
-				organization:        client.env.ORGANIZATION
-				personalAccessToken: client.env.GITHUB_TOKEN
-				kubeconfig:          setup.output.kubeconfig.output.kubeconfig
-				repository: [
-					{
-						name:      client.env.APP_NAME + "-frontend"
-						type:      "frontend"
-						framework: "next"
-						ci:        "github"
-						registry:  "github"
-						deployTemplate: helmStarter: "helm-starter/nodejs/node"
-					},
-					{
-						name:      client.env.APP_NAME + "-backend"
-						type:      "backend"
-						framework: "gin"
-						ci:        "github"
-						registry:  "github"
-						deployTemplate: helmStarter: "helm-starter/go/gin"
-						extraArgs: helmSet: """
-						'.service.labels = {"h8r.io/framework": "gin"}'
-						"""
-					},
-					{
-						name:      client.env.APP_NAME + "-deploy"
-						type:      "deploy"
-						framework: "helm"
-					},
-				]
-				addons: [
-					{
-						name: "prometheus"
-					},
-					{
-						name: "loki"
-					},
-					{
-						name: "nocalhost"
-					},
-				]
-			}
-		}
-
-		_git: scmfactory.#Instance & {
-			input: scmfactory.#Input & {
-				provider:            "github"
-				personalAccessToken: client.env.GITHUB_TOKEN
-				organization:        client.env.ORGANIZATION
-				repositorys:         _scaffold.output.image
-				visibility:          _repoVisibility
-				kubeconfig:          setup.output.kubeconfig.output.kubeconfig
-			}
-		}
-
-		up: {
-			_cd: cdfactory.#Instance & {
-				input: cdfactory.#Input & {
-					provider:    "argocd"
-					repositorys: _git.output.image
-					kubeconfig:  setup.output.kubeconfig.output.kubeconfig
-					domain:      setup.output.app_domain
-				}
-			}
-			_initNocalhost: nocalhost.#Instance & {
-				input: nocalhost.#Input & {
-					image:              _cd.output.image
-					githubAccessToken:  client.env.GITHUB_TOKEN
-					githubOrganization: client.env.ORGANIZATION
-					kubeconfig:         setup.output.kubeconfig.output.kubeconfig
-					appName:            client.env.APP_NAME
-					apiServer:          setup.output.kubeconfig.output.apiServer
-				}
-			}
-			_output: statewriter.#Output & {
-				input: _cd.output
-			}
-		}
-	}
+baseEngine.#Engine & {
+	plan: #Plan
 }
