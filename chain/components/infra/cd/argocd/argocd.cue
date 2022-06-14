@@ -4,6 +4,9 @@ import (
 	"github.com/h8r-dev/stacks/chain/internal/deploy/kubectl"
 	"github.com/h8r-dev/stacks/chain/internal/cd/argocd"
 	"github.com/h8r-dev/stacks/chain/internal/network/ingress"
+
+	// Update state
+	"github.com/h8r-dev/stacks/chain/components/infra/state"
 )
 
 #Instance: {
@@ -38,6 +41,18 @@ import (
 		kubeconfig: input.kubeconfig
 		manifest:   ingressYaml.manifestStream
 		namespace:  input.namespace
+	}
+	getState: state.#Get & {
+		image:      input.image
+		namespace:  input.namespace
+		kubeconfig: input.kubeconfig
+	}
+
+	updateInfraState: state.#Update & {
+		image:         input.image
+		namespace:     input.namespace
+		kubeconfig:    input.kubeconfig
+		updateContent: ""
 	}
 	output: #Output & {
 		image:   _patch.output

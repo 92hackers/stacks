@@ -75,7 +75,7 @@ import (
 		for index, component in install_list {
 			"\(component)": infra_copmonents[component].#Instance & {
 				input: {
-					waitFor:       _createNamespace.success
+					waitFor:       initState.success
 					namespace:     _createNamespace.value.contents
 					helmName:      "\(component)"
 					image:         _baseImage.output
