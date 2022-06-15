@@ -42,10 +42,12 @@ import (
 		manifest:   ingressYaml.manifestStream
 		namespace:  input.namespace
 	}
+
 	getState: state.#Get & {
 		image:      input.image
 		namespace:  input.namespace
 		kubeconfig: input.kubeconfig
+		key:        "argocd"
 	}
 
 	updateInfraState: state.#Update & {
@@ -58,4 +60,9 @@ import (
 		image:   _patch.output
 		success: _patch.success
 	}
+}
+
+#UpdateState: {
+	username: string
+	password: string
 }

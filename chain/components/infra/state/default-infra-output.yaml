@@ -3,81 +3,80 @@ kind: ConfigMap
 metadata:
   name: heighliner-infra-config
 data:
-  infra: |
-    prometheus:
-      enabled: false
-      namespace: default
-      url: xxxx
-      ingress: http://prometheus.h8r.site/
-      credentials:
-        type: basic
-        username: xxx
-        password: xxxx
-      annotations: |
-        xxx        
+  prometheus: |
+    enabled: false
+    namespace: default
+    url: xxxx
+    ingress: http://prometheus.h8r.site/
+    credentials:
+      type: basic
+      username: xxx
+      password: xxxx
+    annotations: |
+      xxx
 
-    grafana:
-      enabled: false
-      namespace: default
-      url: xxxx
-      ingress: http://grafana.h8r.site/
-      credentials:
-        type: basic
-        username: xxx
-        password: xxxx
-      annotations: |
-        xxx      
+  grafana: |
+    enabled: false
+    namespace: default
+    url: xxxx
+    ingress: http://grafana.h8r.site/
+    credentials:
+      type: basic
+      username: xxx
+      password: xxxx
+    annotations: |
+      xxx
 
-    loki:
-      enabled: false
-      namespace: default
-      url: xxxx
-      ingress: http://loki.h8r.site/
-      credentials:
-        type: basic
-        username: xxx
-        password: xxxx
-      annotations: |
-        xxx           
+  loki: |
+    enabled: false
+    namespace: default
+    url: xxxx
+    ingress: http://loki.h8r.site/
+    credentials:
+      type: basic
+      username: xxx
+      password: xxxx
+    annotations: |
+      xxx
 
-    argocd:
-      enabled: false
-      namespace: default
-      url: xxxx
-      ingress: http://argocd.h8r.site/
-      credentials:
-        type: basic
-        username: xxx
-        password: xxxx
-      annotations: |
-        xxx              
+  argocd: |
+    enabled: false
+    namespace: default
+    url: xxxx
+    ingress: http://argocd.h8r.site/
+    credentials:
+      type: basic
+      username: xxx
+      password: xxxx
+    annotations: |
+      xxx
 
-    sealedSecrets:
-      enabled: false
-      namespace: default
-      tlscrt: xxx
-      tlskey: xxx
+  sealedSecrets: |
+    enabled: false
+    namespace: default
+    tlscrt: xxx
+    tlskey: xxx
 
-    alertManager:
-      enabled: false
-      namespace: default
-      url: xxxx
-      ingress: http://alert.h8r.site/
-      credentials:
-        type: basic
-        username: xxx
-        password: xxxx
-      annotations: |
-        xxx      
+  alertManager: |
+    enabled: false
+    namespace: default
+    url: xxxx
+    ingress: http://alert.h8r.site/
+    credentials:
+      type: basic
+      username: xxx
+      password: xxxx
+    annotations: |
+      xxx
 
-    dapr:
-      enabled: false
-      namespace: default
-      url: xxxx
-      ingress: http://dapr.h8r.site/
-      credentials:
-        type: basic
-        username: xxx
-        password: xxxx
-      annotations: |
-        xxx
+  dapr: |
+    enabled: false
+    namespace: default
+    url: xxxx
+    ingress: http://dapr.h8r.site/
+    credentials:
+      type: basic
+      username: xxx
+      password: xxxx
+    annotations: |
+      xxx

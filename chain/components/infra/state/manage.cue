@@ -36,6 +36,7 @@ import (
 	image:      docker.#Image
 	namespace:  string
 	kubeconfig: dagger.#Secret
+	key:        string
 
 	targetConfigmap: "heighliner-infra-config"
 	stateFile:       "/tmp/heighliner-infra-state.yaml"
@@ -46,11 +47,11 @@ import (
 			KUBECONFIG: kubeconfig
 			NAMESPACE:  namespace
 		}
-		// script: contents: """
-		//   kubectl get configmap \(targetConfigmap) \
-		//     -n $NAMESPACE \
-		//     -o yaml | yq ".data.infra" > \(stateFile)
-		// """
+		script: contents: #"""
+			kubectl get configmap \(targetConfigmap) \
+			   -n $NAMESPACE \
+			   -o yaml | yq ".data.\(key)" > \(stateFile)
+			"""#
 	}
 
 	_state: core.#ReadFile & {
@@ -65,6 +66,7 @@ import (
 	image:         docker.#Image
 	namespace:     string
 	kubeconfig:    dagger.#Secret
+	key:           string
 	updateContent: string
 
 	targetConfigmap: "heighliner-infra-config"
@@ -72,15 +74,14 @@ import (
 	run: bash.#Run & {
 		input: image
 		env: {
-			KUBECONFIG:     kubeconfig
-			NAMESPACE:      namespace
-			UPDATE_CONTENT: updateContent
+			KUBECONFIG: kubeconfig
+			NAMESPACE:  namespace
 		}
-		// script: contents: """
-		//   kubectl patch configmap \(targetConfigmap) \
-		//     --namespace $NAMESPACE \
-		//     --type merge \
-		//     --patch '{"data": {"infra": $UPDATE_CONTENT}}'
-		// """
+		script: contents: #"""
+			  kubectl patch configmap \(targetConfigmap) \
+			    --namespace $NAMESPACE \
+			    --type merge \
+			    --patch '{"data": {"\(key)": "\(updateContent)"}}'
+			"""#
 	}
 }
